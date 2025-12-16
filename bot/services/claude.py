@@ -1,6 +1,7 @@
 """
 Claude CLI executor service with safe invocation
 """
+
 import asyncio
 import time
 from typing import Optional, Tuple, Callable, Dict, List
@@ -8,13 +9,17 @@ from dataclasses import dataclass
 from enum import Enum
 
 from bot.config import (
-    logger, CLAUDE_CLI_PATH, CLAUDE_TIMEOUT,
-    CLAUDE_MAX_CONTEXT_MESSAGES, DEFAULT_WORKING_DIR
+    logger,
+    CLAUDE_CLI_PATH,
+    CLAUDE_TIMEOUT,
+    CLAUDE_MAX_CONTEXT_MESSAGES,
+    DEFAULT_WORKING_DIR,
 )
 
 
 class ExecutionStatus(Enum):
     """Execution status codes"""
+
     SUCCESS = "success"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
@@ -24,6 +29,7 @@ class ExecutionStatus(Enum):
 @dataclass
 class ExecutionResult:
     """Result of Claude execution"""
+
     status: ExecutionStatus
     output: Optional[str] = None
     error: Optional[str] = None
@@ -60,9 +66,7 @@ async def cancel_process(user_id: int) -> bool:
 
 
 def build_prompt(
-    user_message: str,
-    context: List[Dict] = None,
-    needs_execution: bool = False
+    user_message: str, context: List[Dict] = None, needs_execution: bool = False
 ) -> str:
     """Build full prompt with context and safety instructions"""
 
@@ -83,7 +87,9 @@ CRITICAL RULES - YOU MUST FOLLOW:
 """
 
     if needs_execution:
-        safety_instructions += "CURRENT MODE: Execution allowed (user explicitly requested action)\n"
+        safety_instructions += (
+            "CURRENT MODE: Execution allowed (user explicitly requested action)\n"
+        )
     else:
         safety_instructions += "CURRENT MODE: Information only (no execution)\n"
 
@@ -96,11 +102,11 @@ CRITICAL RULES - YOU MUST FOLLOW:
         context_messages = []
 
         for msg in recent_context:
-            if msg.get('user'):
+            if msg.get("user"):
                 context_messages.append(f"User: {msg['user']}")
-            if msg.get('assistant'):
+            if msg.get("assistant"):
                 # Truncate long assistant messages in context
-                assistant_msg = msg['assistant']
+                assistant_msg = msg["assistant"]
                 if len(assistant_msg) > 500:
                     assistant_msg = assistant_msg[:500] + "..."
                 context_messages.append(f"Assistant: {assistant_msg}")
@@ -108,7 +114,11 @@ CRITICAL RULES - YOU MUST FOLLOW:
         if context_messages:
             context_text = "Previous context:\n" + "\n".join(context_messages) + "\n\n"
 
-    return safety_instructions + context_text + f"Current request (from Telegram): {user_message}"
+    return (
+        safety_instructions
+        + context_text
+        + f"Current request (from Telegram): {user_message}"
+    )
 
 
 async def execute_claude(
@@ -117,7 +127,7 @@ async def execute_claude(
     context: List[Dict] = None,
     working_dir: str = DEFAULT_WORKING_DIR,
     timeout: int = None,
-    progress_callback: Callable[[str], None] = None
+    progress_callback: Callable[[str], None] = None,
 ) -> ExecutionResult:
     """
     Execute Claude CLI safely with stdin input (no shell injection)
@@ -137,8 +147,19 @@ async def execute_claude(
     start_time = time.time()
 
     # Detect if execution is needed
-    execute_keywords = ['выполни', 'сделай', 'запусти', 'исправь', 'создай', 'удали', 'restart', 'перезапусти']
-    needs_execution = any(keyword in user_message.lower() for keyword in execute_keywords)
+    execute_keywords = [
+        "выполни",
+        "сделай",
+        "запусти",
+        "исправь",
+        "создай",
+        "удали",
+        "restart",
+        "перезапусти",
+    ]
+    needs_execution = any(
+        keyword in user_message.lower() for keyword in execute_keywords
+    )
 
     # Add prefix for non-execution requests
     if not needs_execution:
@@ -146,7 +167,9 @@ async def execute_claude(
 
     # Build full prompt
     full_prompt = build_prompt(user_message, context, needs_execution)
-    logger.info(f"Executing Claude for user {user_id}, prompt length: {len(full_prompt)}")
+    logger.info(
+        f"Executing Claude for user {user_id}, prompt length: {len(full_prompt)}"
+    )
 
     process = None
     progress_task = None
@@ -158,7 +181,7 @@ async def execute_claude(
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            cwd=working_dir
+            cwd=working_dir,
         )
 
         # Track process for cancellation
@@ -166,12 +189,13 @@ async def execute_claude(
 
         # Start progress updates
         if progress_callback:
+
             async def update_progress():
                 statuses = [
                     "⏳ Claude думает...",
                     "⚙️ Обрабатываю запрос...",
                     "🔄 Анализирую...",
-                    "📊 Готовлю ответ..."
+                    "📊 Готовлю ответ...",
                 ]
                 counter = 0
                 while process.returncode is None:
@@ -188,8 +212,7 @@ async def execute_claude(
         # Execute with timeout
         try:
             stdout, stderr = await asyncio.wait_for(
-                process.communicate(input=full_prompt.encode('utf-8')),
-                timeout=timeout
+                process.communicate(input=full_prompt.encode("utf-8")), timeout=timeout
             )
         except asyncio.TimeoutError:
             process.terminate()
@@ -202,33 +225,35 @@ async def execute_claude(
             return ExecutionResult(
                 status=ExecutionStatus.TIMEOUT,
                 error=f"Превышено время ожидания ({timeout} секунд)",
-                execution_time_ms=execution_time
+                execution_time_ms=execution_time,
             )
 
         execution_time = int((time.time() - start_time) * 1000)
 
         # Check return code
         if process.returncode == 0:
-            output = stdout.decode('utf-8')
-            logger.info(f"Claude response received: {len(output)} chars in {execution_time}ms")
+            output = stdout.decode("utf-8")
+            logger.info(
+                f"Claude response received: {len(output)} chars in {execution_time}ms"
+            )
             return ExecutionResult(
                 status=ExecutionStatus.SUCCESS,
                 output=output,
-                execution_time_ms=execution_time
+                execution_time_ms=execution_time,
             )
         elif process.returncode == -15:  # SIGTERM
             return ExecutionResult(
                 status=ExecutionStatus.CANCELLED,
                 error="Выполнение отменено",
-                execution_time_ms=execution_time
+                execution_time_ms=execution_time,
             )
         else:
-            error = stderr.decode('utf-8')
+            error = stderr.decode("utf-8")
             logger.error(f"Claude error (code {process.returncode}): {error}")
             return ExecutionResult(
                 status=ExecutionStatus.ERROR,
                 error=error or f"Exit code: {process.returncode}",
-                execution_time_ms=execution_time
+                execution_time_ms=execution_time,
             )
 
     except asyncio.CancelledError:
@@ -238,16 +263,14 @@ async def execute_claude(
         return ExecutionResult(
             status=ExecutionStatus.CANCELLED,
             error="Выполнение отменено",
-            execution_time_ms=execution_time
+            execution_time_ms=execution_time,
         )
 
     except Exception as e:
         logger.error(f"Claude execution error: {e}")
         execution_time = int((time.time() - start_time) * 1000)
         return ExecutionResult(
-            status=ExecutionStatus.ERROR,
-            error=str(e),
-            execution_time_ms=execution_time
+            status=ExecutionStatus.ERROR, error=str(e), execution_time_ms=execution_time
         )
 
     finally:

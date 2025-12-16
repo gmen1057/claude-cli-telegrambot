@@ -1,6 +1,7 @@
 """
 Message handler for processing text messages
 """
+
 from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
@@ -45,16 +46,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_id=user_id,
             context=session.context,
             working_dir=session.working_dir,
-            progress_callback=update_status
+            progress_callback=update_status,
         )
 
         # Log the command
         log_command(
             user_id=user_id,
             command=user_message,
-            response=result.output if result.status == ExecutionStatus.SUCCESS else None,
+            response=(
+                result.output if result.status == ExecutionStatus.SUCCESS else None
+            ),
             execution_time_ms=result.execution_time_ms,
-            error=result.error if result.status != ExecutionStatus.SUCCESS else None
+            error=result.error if result.status != ExecutionStatus.SUCCESS else None,
         )
 
         # Handle different statuses
@@ -67,7 +70,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # Edit first message
             try:
-                await processing_msg.edit_text(formatted_parts[0], parse_mode=ParseMode.HTML)
+                await processing_msg.edit_text(
+                    formatted_parts[0], parse_mode=ParseMode.HTML
+                )
             except Exception as e:
                 # Fallback without HTML if formatting fails
                 logger.warning(f"HTML formatting failed: {e}")

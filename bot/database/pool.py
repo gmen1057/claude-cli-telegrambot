@@ -1,6 +1,7 @@
 """
 Database connection pool for PostgreSQL
 """
+
 import psycopg2
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
@@ -18,12 +19,10 @@ def init_pool() -> pool.ThreadedConnectionPool:
     global _pool
     if _pool is None:
         try:
-            _pool = pool.ThreadedConnectionPool(
-                DB_POOL_MIN,
-                DB_POOL_MAX,
-                **DB_CONFIG
+            _pool = pool.ThreadedConnectionPool(DB_POOL_MIN, DB_POOL_MAX, **DB_CONFIG)
+            logger.info(
+                f"Database pool initialized (min={DB_POOL_MIN}, max={DB_POOL_MAX})"
             )
-            logger.info(f"Database pool initialized (min={DB_POOL_MIN}, max={DB_POOL_MAX})")
         except Exception as e:
             logger.error(f"Failed to initialize database pool: {e}")
             raise
@@ -70,7 +69,9 @@ def get_cursor(dict_cursor: bool = False):
             cur.close()
 
 
-def execute_query(query: str, params: tuple = None, fetch: bool = False, dict_cursor: bool = False) -> Optional[Any]:
+def execute_query(
+    query: str, params: tuple = None, fetch: bool = False, dict_cursor: bool = False
+) -> Optional[Any]:
     """Execute a query and optionally fetch results"""
     with get_cursor(dict_cursor=dict_cursor) as cur:
         cur.execute(query, params)
@@ -79,7 +80,9 @@ def execute_query(query: str, params: tuple = None, fetch: bool = False, dict_cu
         return None
 
 
-def execute_one(query: str, params: tuple = None, dict_cursor: bool = True) -> Optional[Dict]:
+def execute_one(
+    query: str, params: tuple = None, dict_cursor: bool = True
+) -> Optional[Dict]:
     """Execute a query and fetch one result"""
     with get_cursor(dict_cursor=dict_cursor) as cur:
         cur.execute(query, params)
@@ -90,7 +93,8 @@ def init_database():
     """Initialize database tables"""
     with get_cursor() as cur:
         # Sessions table
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS sessions (
                 user_id BIGINT PRIMARY KEY,
                 conversation_id UUID DEFAULT gen_random_uuid(),
@@ -103,10 +107,12 @@ def init_database():
                 last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 message_count INT DEFAULT 0
             )
-        """)
+        """
+        )
 
         # Command logs table
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS command_logs (
                 id SERIAL PRIMARY KEY,
                 user_id BIGINT,
@@ -116,15 +122,18 @@ def init_database():
                 error TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # Rate limiting table
-        cur.execute("""
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS rate_limits (
                 user_id BIGINT PRIMARY KEY,
                 message_count INT DEFAULT 0,
                 window_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         logger.info("Database tables initialized")

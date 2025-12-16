@@ -1,6 +1,7 @@
 """
 Command handlers for Telegram bot
 """
+
 import os
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -41,7 +42,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /cancel - Отменить выполняемую команду\n"
         "• /help - Помощь\n\n"
         f"📁 Рабочая директория: <code>{escape_html(session.working_dir)}</code>",
-        parse_mode=ParseMode.HTML
+        parse_mode=ParseMode.HTML,
     )
 
 
@@ -72,7 +73,9 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Add active process indicator
     if has_active_process(user_id):
-        status_text += "\n\n⚙️ <b>Выполняется команда...</b> (используйте /cancel для отмены)"
+        status_text += (
+            "\n\n⚙️ <b>Выполняется команда...</b> (используйте /cancel для отмены)"
+        )
 
     await update.message.reply_text(status_text, parse_mode=ParseMode.HTML)
 
@@ -96,18 +99,18 @@ async def cmd_context(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     parts = ["<b>Последние сообщения:</b>\n"]
     for msg in recent:
-        user_msg = msg.get('user', '')
+        user_msg = msg.get("user", "")
         if len(user_msg) > 100:
-            user_msg = user_msg[:100] + '...'
+            user_msg = user_msg[:100] + "..."
 
-        assistant_msg = msg.get('assistant', '')
+        assistant_msg = msg.get("assistant", "")
         if len(assistant_msg) > 100:
-            assistant_msg = assistant_msg[:100] + '...'
+            assistant_msg = assistant_msg[:100] + "..."
 
         parts.append(f"👤 {escape_html(user_msg)}")
         parts.append(f"🤖 {escape_html(assistant_msg)}\n")
 
-    await update.message.reply_text('\n'.join(parts), parse_mode=ParseMode.HTML)
+    await update.message.reply_text("\n".join(parts), parse_mode=ParseMode.HTML)
 
 
 async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -122,7 +125,7 @@ async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Split if too long
     if len(history_text) > 4096:
-        parts = [history_text[i:i+4096] for i in range(0, len(history_text), 4096)]
+        parts = [history_text[i : i + 4096] for i in range(0, len(history_text), 4096)]
         await update.message.reply_text(parts[0], parse_mode=ParseMode.HTML)
         for part in parts[1:]:
             await update.message.reply_text(part, parse_mode=ParseMode.HTML)
@@ -155,7 +158,9 @@ async def cmd_cd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = text.split(maxsplit=1)
 
     if len(parts) < 2:
-        await update.message.reply_text("Использование: /cd &lt;путь&gt;", parse_mode=ParseMode.HTML)
+        await update.message.reply_text(
+            "Использование: /cd &lt;путь&gt;", parse_mode=ParseMode.HTML
+        )
         return
 
     new_dir = parts[1].strip()
@@ -165,10 +170,12 @@ async def cmd_cd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session_manager.update_session(user_id, working_dir=new_dir)
         await update.message.reply_text(
             f"✅ Рабочая директория изменена на: <code>{escape_html(new_dir)}</code>",
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
         )
     else:
-        await update.message.reply_text(f"❌ Директория не существует: {escape_html(new_dir)}")
+        await update.message.reply_text(
+            f"❌ Директория не существует: {escape_html(new_dir)}"
+        )
 
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):

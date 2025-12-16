@@ -1,6 +1,7 @@
 """
 Claude Code Telegram Bot - Main Entry Point
 """
+
 import signal
 import asyncio
 from telegram import Update
@@ -11,8 +12,14 @@ from bot.database.pool import init_pool, init_database, close_pool
 from bot.services.claude import terminate_all_processes
 from bot.services.session import session_manager
 from bot.handlers.commands import (
-    cmd_start, cmd_reset, cmd_status, cmd_context,
-    cmd_history, cmd_cancel, cmd_cd, cmd_help
+    cmd_start,
+    cmd_reset,
+    cmd_status,
+    cmd_context,
+    cmd_history,
+    cmd_cancel,
+    cmd_cd,
+    cmd_help,
 )
 from bot.handlers.messages import handle_message
 from bot.handlers.files import handle_file
@@ -25,16 +32,18 @@ _shutdown_event = asyncio.Event()
 async def post_init(application: Application):
     """Called after application initialization"""
     # Set bot commands
-    await application.bot.set_my_commands([
-        ("start", "🚀 Запустить бота"),
-        ("reset", "🔄 Начать новую сессию"),
-        ("status", "📊 Статус текущей сессии"),
-        ("context", "💬 Показать текущий контекст"),
-        ("history", "📜 История всех команд"),
-        ("cancel", "🛑 Отменить текущую команду"),
-        ("cd", "📁 Сменить директорию"),
-        ("help", "❓ Помощь по командам")
-    ])
+    await application.bot.set_my_commands(
+        [
+            ("start", "🚀 Запустить бота"),
+            ("reset", "🔄 Начать новую сессию"),
+            ("status", "📊 Статус текущей сессии"),
+            ("context", "💬 Показать текущий контекст"),
+            ("history", "📜 История всех команд"),
+            ("cancel", "🛑 Отменить текущую команду"),
+            ("cd", "📁 Сменить директорию"),
+            ("help", "❓ Помощь по командам"),
+        ]
+    )
     logger.info("Bot commands registered")
 
 
@@ -135,13 +144,10 @@ def main():
 
     # Run the bot
     logger.info("Claude Code Bot starting...")
-    application.run_polling(
-        allowed_updates=Update.ALL_TYPES,
-        drop_pending_updates=True
-    )
+    application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

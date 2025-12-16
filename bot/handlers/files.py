@@ -1,6 +1,7 @@
 """
 File handler for processing uploaded files and images
 """
+
 import os
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -21,20 +22,35 @@ def check_access(user_id: int) -> bool:
 
 def get_file_type_hint(filename: str) -> str:
     """Get file type and suggested action"""
-    ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    ext = filename.lower().split(".")[-1] if "." in filename else ""
 
-    image_exts = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'}
-    text_exts = {'txt', 'py', 'js', 'ts', 'json', 'md', 'log', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'sh', 'bash'}
-    code_exts = {'py', 'js', 'ts', 'java', 'cpp', 'c', 'h', 'go', 'rs', 'rb', 'php'}
+    image_exts = {"jpg", "jpeg", "png", "gif", "webp", "bmp"}
+    text_exts = {
+        "txt",
+        "py",
+        "js",
+        "ts",
+        "json",
+        "md",
+        "log",
+        "yaml",
+        "yml",
+        "toml",
+        "ini",
+        "cfg",
+        "sh",
+        "bash",
+    }
+    code_exts = {"py", "js", "ts", "java", "cpp", "c", "h", "go", "rs", "rb", "php"}
 
     if ext in image_exts:
-        return 'image', 'Посмотри изображение и'
+        return "image", "Посмотри изображение и"
     elif ext in code_exts:
-        return 'code', 'Прочитай код и'
+        return "code", "Прочитай код и"
     elif ext in text_exts:
-        return 'text', 'Прочитай файл и'
+        return "text", "Прочитай файл и"
     else:
-        return 'unknown', 'Проанализируй файл и'
+        return "unknown", "Проанализируй файл и"
 
 
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -75,10 +91,14 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Build request based on file type
         file_type, action_prefix = get_file_type_hint(file_name)
 
-        if file_type == 'image':
-            request_text = f"[РАЗРЕШЕНО ЧИТАТЬ ФАЙЛЫ] {action_prefix} {caption}. Файл: {file_path}"
+        if file_type == "image":
+            request_text = (
+                f"[РАЗРЕШЕНО ЧИТАТЬ ФАЙЛЫ] {action_prefix} {caption}. Файл: {file_path}"
+            )
         else:
-            request_text = f"[РАЗРЕШЕНО ЧИТАТЬ ФАЙЛЫ] {action_prefix} {caption}. Файл: {file_path}"
+            request_text = (
+                f"[РАЗРЕШЕНО ЧИТАТЬ ФАЙЛЫ] {action_prefix} {caption}. Файл: {file_path}"
+            )
 
         await processing_msg.edit_text("🔄 Обрабатываю файл...")
 
@@ -98,31 +118,33 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_id=user_id,
             context=session.context,
             working_dir=session.working_dir,
-            progress_callback=update_status
+            progress_callback=update_status,
         )
 
         # Log the command
         log_command(
             user_id=user_id,
             command=f"[Файл: {file_name}] {caption}",
-            response=result.output if result.status == ExecutionStatus.SUCCESS else None,
+            response=(
+                result.output if result.status == ExecutionStatus.SUCCESS else None
+            ),
             execution_time_ms=result.execution_time_ms,
-            error=result.error if result.status != ExecutionStatus.SUCCESS else None
+            error=result.error if result.status != ExecutionStatus.SUCCESS else None,
         )
 
         if result.status == ExecutionStatus.SUCCESS:
             # Add to session context
             session_manager.add_message(
-                user_id,
-                f"[Файл: {file_name}] {caption}",
-                result.output
+                user_id, f"[Файл: {file_name}] {caption}", result.output
             )
 
             # Format and send response
             formatted_parts = format_for_telegram(result.output)
 
             try:
-                await processing_msg.edit_text(formatted_parts[0], parse_mode=ParseMode.HTML)
+                await processing_msg.edit_text(
+                    formatted_parts[0], parse_mode=ParseMode.HTML
+                )
             except Exception as e:
                 logger.warning(f"HTML formatting failed: {e}")
                 await processing_msg.edit_text(result.output[:4096])

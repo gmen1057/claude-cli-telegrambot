@@ -1,6 +1,7 @@
 """
 Session management service
 """
+
 import json
 from datetime import datetime
 from typing import Optional, Dict, Any, List
@@ -13,6 +14,7 @@ from bot.database.pool import execute_query, execute_one, get_cursor
 @dataclass
 class Session:
     """User session data"""
+
     user_id: int
     conversation_id: str = ""
     context: List[Dict] = field(default_factory=list)
@@ -27,32 +29,32 @@ class Session:
     def to_dict(self) -> Dict:
         """Convert to dictionary"""
         return {
-            'user_id': self.user_id,
-            'conversation_id': str(self.conversation_id),
-            'context': self.context,
-            'context_summary': self.context_summary,
-            'working_dir': self.working_dir,
-            'active_project': self.active_project,
-            'important_decisions': self.important_decisions,
-            'created_at': self.created_at,
-            'last_activity': self.last_activity,
-            'message_count': self.message_count
+            "user_id": self.user_id,
+            "conversation_id": str(self.conversation_id),
+            "context": self.context,
+            "context_summary": self.context_summary,
+            "working_dir": self.working_dir,
+            "active_project": self.active_project,
+            "important_decisions": self.important_decisions,
+            "created_at": self.created_at,
+            "last_activity": self.last_activity,
+            "message_count": self.message_count,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'Session':
+    def from_dict(cls, data: Dict) -> "Session":
         """Create from dictionary"""
         return cls(
-            user_id=data['user_id'],
-            conversation_id=str(data.get('conversation_id', '')),
-            context=data.get('context', []) or [],
-            context_summary=data.get('context_summary', '') or '',
-            working_dir=data.get('working_dir', DEFAULT_WORKING_DIR),
-            active_project=data.get('active_project', '') or '',
-            important_decisions=data.get('important_decisions', []) or [],
-            created_at=data.get('created_at'),
-            last_activity=data.get('last_activity'),
-            message_count=data.get('message_count', 0)
+            user_id=data["user_id"],
+            conversation_id=str(data.get("conversation_id", "")),
+            context=data.get("context", []) or [],
+            context_summary=data.get("context_summary", "") or "",
+            working_dir=data.get("working_dir", DEFAULT_WORKING_DIR),
+            active_project=data.get("active_project", "") or "",
+            important_decisions=data.get("important_decisions", []) or [],
+            created_at=data.get("created_at"),
+            last_activity=data.get("last_activity"),
+            message_count=data.get("message_count", 0),
         )
 
 
@@ -70,10 +72,7 @@ class SessionManager:
             return self._cache[user_id]
 
         # Try to load from database
-        row = execute_one(
-            "SELECT * FROM sessions WHERE user_id = %s",
-            (user_id,)
-        )
+        row = execute_one("SELECT * FROM sessions WHERE user_id = %s", (user_id,))
 
         if row:
             session = Session.from_dict(dict(row))
@@ -83,14 +82,10 @@ class SessionManager:
 
         # Create new session
         execute_one(
-            "INSERT INTO sessions (user_id) VALUES (%s) RETURNING *",
-            (user_id,)
+            "INSERT INTO sessions (user_id) VALUES (%s) RETURNING *", (user_id,)
         )
 
-        row = execute_one(
-            "SELECT * FROM sessions WHERE user_id = %s",
-            (user_id,)
-        )
+        row = execute_one("SELECT * FROM sessions WHERE user_id = %s", (user_id,))
 
         session = Session.from_dict(dict(row))
         self._cache[user_id] = session
@@ -111,9 +106,11 @@ class SessionManager:
         values = []
 
         for key, value in updates.items():
-            if key in ('context', 'important_decisions'):
+            if key in ("context", "important_decisions"):
                 set_parts.append(f"{key} = %s::jsonb")
-                values.append(json.dumps(value) if isinstance(value, (list, dict)) else value)
+                values.append(
+                    json.dumps(value) if isinstance(value, (list, dict)) else value
+                )
             else:
                 set_parts.append(f"{key} = %s")
                 values.append(value)
@@ -129,24 +126,24 @@ class SessionManager:
         with get_cursor() as cur:
             cur.execute(query, values)
 
-    def add_message(self, user_id: int, user_msg: str, assistant_msg: str, source: str = 'telegram') -> None:
+    def add_message(
+        self, user_id: int, user_msg: str, assistant_msg: str, source: str = "telegram"
+    ) -> None:
         """Add a message to session context"""
         session = self.get_session(user_id)
 
         message = {
-            'user': user_msg,
-            'assistant': assistant_msg,
-            'timestamp': datetime.now().isoformat(),
-            'source': source
+            "user": user_msg,
+            "assistant": assistant_msg,
+            "timestamp": datetime.now().isoformat(),
+            "source": source,
         }
 
         session.context.append(message)
         session.message_count += 1
 
         self.update_session(
-            user_id,
-            context=session.context,
-            message_count=session.message_count
+            user_id, context=session.context, message_count=session.message_count
         )
 
     def reset_session(self, user_id: int) -> Session:
@@ -168,25 +165,43 @@ class SessionManager:
         self._cache.clear()
 
 
-def log_command(user_id: int, command: str, response: str, execution_time_ms: int = None, error: str = None) -> None:
+def log_command(
+    user_id: int,
+    command: str,
+    response: str,
+    execution_time_ms: int = None,
+    error: str = None,
+) -> None:
     """Log a command execution"""
     with get_cursor() as cur:
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO command_logs (user_id, command, response, execution_time_ms, error)
             VALUES (%s, %s, %s, %s, %s)
-        """, (user_id, command[:2000], response[:5000] if response else None, execution_time_ms, error))
+        """,
+            (
+                user_id,
+                command[:2000],
+                response[:5000] if response else None,
+                execution_time_ms,
+                error,
+            ),
+        )
 
 
 def get_command_history(user_id: int, limit: int = 20) -> List[Dict]:
     """Get command history for user"""
     with get_cursor(dict_cursor=True) as cur:
-        cur.execute("""
+        cur.execute(
+            """
             SELECT command, response, execution_time_ms, error, created_at
             FROM command_logs
             WHERE user_id = %s
             ORDER BY created_at DESC
             LIMIT %s
-        """, (user_id, limit))
+        """,
+            (user_id, limit),
+        )
         return cur.fetchall()
 
 
