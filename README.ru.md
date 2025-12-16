@@ -31,8 +31,8 @@
 ### 1. Клонируйте репозиторий
 
 ```bash
-git clone https://github.com/gmen1057/claude-code-bot.git
-cd claude-code-bot
+git clone https://github.com/gmen1057/claude-cli-telegrambot.git
+cd claude-cli-telegrambot
 ```
 
 ### 2. Создайте виртуальное окружение
@@ -300,5 +300,5 @@ MIT License — см. [LICENSE](LICENSE).
 
 ## Поддержка
 
-- **Issues:** [GitHub Issues](https://github.com/gmen1057/claude-code-bot/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/gmen1057/claude-code-bot/discussions)
+- **Issues:** [GitHub Issues](https://github.com/gmen1057/claude-cli-telegrambot/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/gmen1057/claude-cli-telegrambot/discussions)
