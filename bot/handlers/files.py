@@ -62,7 +62,9 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # Download file
         file = await context.bot.get_file(file_obj.file_id)
-        file_path = os.path.join(USER_FILES_DIR, file_name)
+        # Sanitize filename to prevent path traversal attacks
+        safe_file_name = os.path.basename(file_name)
+        file_path = os.path.join(USER_FILES_DIR, safe_file_name)
         await file.download_to_drive(file_path)
 
         logger.info(f"File downloaded: {file_path}")
